@@ -29,7 +29,7 @@ While popular spots face overtourism, countless beautiful locations remain hidde
 
 1. **Clone the repository:**
 git clone https://github.com/DRUNKAssassin/project-sentinel.git
-cd project-sentinel-scraper
+cd project-sentinel
 
 2. **Install dependencies:**
 pip install -r requirements.txt
