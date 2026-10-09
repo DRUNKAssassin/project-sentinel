@@ -28,7 +28,7 @@ While popular spots face overtourism, countless beautiful locations remain hidde
 ## 🚀 Local Setup
 
 1. **Clone the repository:**
-git clone https://github.com/YOUR_USERNAME/project-sentinel-scraper.git
+git clone https://github.com/DRUNKAssassin/project-sentinel.git
 cd project-sentinel-scraper
 
 2. **Install dependencies:**
