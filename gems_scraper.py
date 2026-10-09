@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 SEARCH_QUERY = "Kashmir offbeat hidden gems travel vlog"
 MAX_VIDEOS_TO_CHECK = 5 # How many recent videos to look at per run
 TRACKING_FILE = "processed_links.txt"
+WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwNYOeXSmLCgOG4QqZvg_niNAU9TITPTZbVNRYA2uXsFzyz7BuY25BeMuvBPmF5du9o/exec"
 
 # 1. Exact folder path resolution for .env
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,13 +36,13 @@ def get_processed_videos():
     """Reads the tracking file to remember which videos we've already scraped."""
     if not os.path.exists(TRACKING_FILE):
         return set()
-    with open(TRACKING_FILE, 'r') as f:
+    with open(TRACKING_FILE, 'r', encoding="utf-8") as f:
         # Returns a set of video IDs
-        return set(line.strip() for line in f.readlines())
+        return set(line.strip() for line in f if line.strip())
 
 def mark_video_processed(video_id):
     """Saves a successfully scraped video ID to the tracking file."""
-    with open(TRACKING_FILE, 'a') as f:
+    with open(TRACKING_FILE, 'a', encoding="utf-8") as f:
         f.write(f"{video_id}\n")
 
 def search_new_youtube_videos(query, max_results=5):
@@ -51,18 +52,26 @@ def search_new_youtube_videos(query, max_results=5):
         print("❌ Missing YouTube API Key. Cannot perform search.")
         return []
 
-    # Call the raw YouTube Data API v3
-    url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&order=date&maxResults={max_results}&q={requests.utils.quote(query)}&key={YOUTUBE_API_KEY}"
+    # Call the raw YouTube Data API v3 cleanly
+    url = "https://www.googleapis.com/youtube/v3/search"
+    params = {
+        "part": "snippet",
+        "q": query,
+        "type": "video",
+        "maxResults": max_results,
+        "order": "date",
+        "key": YOUTUBE_API_KEY
+    }
     
     try:
-        response = requests.get(url)
+        response = requests.get(url, params=params, timeout=15)
         data = response.json()
         
         if 'error' in data:
             print(f"❌ YouTube API Error: {data['error']['message']}")
             return []
             
-        video_ids = [item['id']['videoId'] for item in data.get('items', [])]
+        video_ids = [item['id']['videoId'] for item in data.get('items', []) if 'videoId' in item.get('id', {})]
         print(f"✅ Found {len(video_ids)} recent videos on YouTube.")
         return video_ids
         
@@ -139,10 +148,9 @@ def push_to_google_sheets(extracted_data):
         return True # Return true so we still mark the video as processed
         
     print("\n--- Connecting to Google Sheets Webhook ---")
-    webhook_url = "https://script.google.com/macros/s/AKfycbwNYOeXSmLCgOG4QqZvg_niNAU9TITPTZbVNRYA2uXsFzyz7BuY25BeMuvBPmF5du9o/exec"
     
     try:
-        response = requests.post(webhook_url, json=extracted_data)
+        response = requests.post(WEBHOOK_URL, json=extracted_data, timeout=20)
         if response.text == "Success":
             print("🎉 SUCCESS: Data pushed to Google Sheets instantly!")
             return True
@@ -176,7 +184,7 @@ def main():
     # 3. Process them one by one
     for video_id in new_video_ids:
         if video_id in processed_videos:
-            print(f"⏭️ Skipping video {video_id} - Already processed.")
+            print(f"⏭️ Skipping video {video_id}. Already processed.")
             continue
             
         print(f"\n--------------------------------------------------")
